@@ -1,0 +1,12 @@
+[project]
+name = "browser-master"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "browser-use>=0.12.6",
+    "openai>=2.16.0",
+    "playwright>=1.58.0",
+    "pytest>=9.0.3",
+]
