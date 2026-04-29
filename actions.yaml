@@ -1,0 +1,17 @@
+steps:
+  - action: "goto"
+    url: "http://localhost:4200"
+  - action: "fill"
+    label: "Employee ID Lookup"
+    value: "123"
+  - action: "click"
+    text: "Search Profile"
+  - action: "wait"
+    ms: 1000
+  - action: "select"
+    label: "Medical Coverage"
+    value: "Platinum Medical"
+  - action: "click"
+    text: "Submit Updates"
+  - action: "wait"
+    ms: 2000
