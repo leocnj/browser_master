@@ -1,1 +1,18 @@
-<p>employee works!</p>
+<div class="hostile-wrapper" ng-reflect-type="form-container">
+  <div>
+    <span>Emp ID:</span>
+    <input type="text" [(ngModel)]="employeeId" ng-reflect-model="empId" />
+    <div class="submit-btn" style="cursor: pointer; background: #eee; border: 1px solid #ccc; display: inline-block; padding: 2px 5px;" (click)="search()">Find</div>
+  </div>
+
+  <div *ngIf="employeeData" style="margin-top: 20px; padding: 10px; border: 1px dashed #666;">
+    <div *ngIf="employeeData.error">Employee not found!</div>
+    <div *ngIf="!employeeData.error">
+      <div>Current Plan: {{ employeeData.dental }}</div>
+      <br>
+      <span>Update Dental:</span>
+      <input type="text" [(ngModel)]="newDental" ng-reflect-model="dentalPlan" />
+      <div class="submit-btn" style="cursor: pointer; background: #eee; border: 1px solid #ccc; display: inline-block; padding: 2px 5px;" (click)="update()">Save Plan</div>
+    </div>
+  </div>
+</div>

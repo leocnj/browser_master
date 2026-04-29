@@ -12,6 +12,8 @@ db.serialize(() => {
     db.run("INSERT INTO employees VALUES ('123', 'Basic Plan')");
 });
 
+app.get('/', (req, res) => res.send('Mock HR Backend is running!'));
+
 app.get('/api/employee/:id', (req, res) => {
     db.get("SELECT * FROM employees WHERE id = ?", [req.params.id], (err, row) => {
         res.json(row || { error: 'Not found' });

@@ -1,8 +1,12 @@
 import os
-from openai import OpenAI
+from langchain_openai import ChatOpenAI
 
 def generate_script(filtered_history: list, params: dict, output_path: str):
-    client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
+    llm = ChatOpenAI(
+        base_url="https://openrouter.ai/api/v1",
+        api_key=os.environ.get("OPENROUTER_API_KEY"),
+        model="openai/gpt-4o-2024-11-20"
+    )
     prompt = f"""
     You are a Playwright expert. Convert this agent history into a Python Playwright script.
     The target is a legacy Angular app with poor accessibility. Use this fallback hierarchy for locators:
@@ -16,12 +20,9 @@ def generate_script(filtered_history: list, params: dict, output_path: str):
     Output ONLY python code.
     """
     
-    response = client.chat.completions.create(
-        model="gpt-4o",
-        messages=[{"role": "user", "content": prompt}]
-    )
+    response = llm.invoke(prompt)
     
-    code = response.choices[0].message.content.replace("```python", "").replace("```", "").strip()
+    code = response.content.replace("```python", "").replace("```", "").strip()
     
     with open(output_path, "w") as f:
         f.write(code)
