@@ -13,19 +13,15 @@
 ### Task 1: Initialize Python Project and Filter Scaffold
 
 **Files:**
-- Create: `requirements.txt`
+- Create: `pyproject.toml` (via uv)
 - Create: `src/runner.py`
 - Create: `src/generator.py`
 - Create: `src/filter.py`
 - Test: `tests/test_filter.py`
 
-- [ ] **Step 1: Write requirements.txt**
-```text
-browser-use
-playwright
-openai
-pytest
-```
+- [ ] **Step 1: Initialize project with uv**
+Run: `uv init --python 3.12 && uv add browser-use playwright openai pytest`
+Expected: `pyproject.toml` and `.venv` created with dependencies.
 
 - [ ] **Step 2: Initialize basic filter test**
 ```python
@@ -39,7 +35,7 @@ def test_filter_removes_errors():
 ```
 
 - [ ] **Step 3: Run test to verify it fails**
-Run: `pytest tests/test_filter.py -v`
+Run: `uv run pytest tests/test_filter.py -v`
 Expected: FAIL (ModuleNotFoundError for src.filter)
 
 - [ ] **Step 4: Write minimal filter implementation**
@@ -61,13 +57,13 @@ def generate_script(filtered_history: list, params: dict):
 ```
 
 - [ ] **Step 6: Run test to verify it passes**
-Run: `pytest tests/test_filter.py -v`
+Run: `uv run pytest tests/test_filter.py -v`
 Expected: PASS
 
 - [ ] **Step 7: Commit**
 ```bash
-git add requirements.txt src/ tests/
-git commit -m "feat: initialize python project and filter scaffold"
+git add pyproject.toml uv.lock src/ tests/
+git commit -m "feat: initialize python project with uv and filter scaffold"
 ```
 
 ### Task 2: Scaffold Mock Angular App & Backend
