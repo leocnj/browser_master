@@ -32,7 +32,7 @@ The system utilizes a Dual-Agent Workflow with two distinct phases:
 3.  **Playwright Generator (`generator.py`):**
     *   Takes the filtered history and a parameter configuration (e.g., `{"employee_id": "123", "benefit_type": "Premium Plan"}`).
     *   Calls the Coder LLM.
-    *   Prompts the LLM to map the raw actions to Playwright methods using robust Angular-friendly selectors (`getByText`, `getByRole`, etc.) instead of brittle CSS selectors.
+    *   Prompts the LLM to map the raw actions to Playwright methods. Since the target is a legacy Angular application lacking accessibility standards, the LLM must be instructed to use a fallback hierarchy for selectors: `getByText` (if present), `ng-reflect` attributes, XPath relative to nearby text, and structural selectors (e.g., `.nth()`) as a last resort, instead of assuming `getByRole` or `getByLabel` will work.
     *   Outputs a standalone `.py` file containing the parameterized Playwright function.
 
 ## Parameterization
