@@ -1,27 +1,29 @@
 import playwright.sync_api
 import time
 
-def run(page: playwright.sync_api.Page, employee_id: str, benefit_type: str):
+def run(page: playwright.sync_api.Page, employee_id: str, medical_coverage: str):
     print(f"Navigating to http://localhost:4200...")
     page.goto("http://localhost:4200")
     
     # Wait for the app to load
-    page.wait_for_selector('.hostile-wrapper')
+    page.wait_for_selector('.glass-panel')
     
-    print(f"Entering employee ID: {employee_id} (using fallback XPath locator)")
-    page.locator("xpath=//span[text()='Emp ID:']/following-sibling::input").fill(employee_id)
+    print(f"Entering employee ID: {employee_id} (using semantic locator)")
+    # Using the semantic label fallback
+    page.get_by_label("Employee ID Lookup").fill(employee_id)
     
-    print("Clicking 'Find' (using get_by_text fallback)")
-    page.get_by_text("Find").click()
+    print("Clicking 'Search Profile' (using get_by_text fallback)")
+    page.get_by_text("Search Profile").click()
     
-    # Wait for backend response to render
-    page.locator("xpath=//span[text()='Update Dental:']/following-sibling::input").wait_for(state="visible")
+    # Wait for backend response to render the benefits section
+    page.locator("xpath=//span[text()='Medical Coverage:']/following-sibling::select").wait_for(state="visible")
     
-    print(f"Updating dental plan to: {benefit_type} (using fallback XPath locator)")
-    page.locator("xpath=//span[text()='Update Dental:']/following-sibling::input").fill(benefit_type)
+    print(f"Updating Medical Coverage to: {medical_coverage} (using hostile DOM XPath fallback)")
+    # Using the XPath fallback because the select has no label, id, or name
+    page.locator("xpath=//span[text()='Medical Coverage:']/following-sibling::select").select_option(medical_coverage)
     
-    print("Clicking 'Save Plan' (using get_by_text fallback)")
-    page.get_by_text("Save Plan").click()
+    print("Clicking 'Submit Updates' (using hostile DOM get_by_text fallback on a div)")
+    page.get_by_text("Submit Updates").click()
     
     # Wait a bit to observe the final state
     page.wait_for_timeout(2000)
@@ -34,10 +36,10 @@ if __name__ == '__main__':
         page = browser.new_page()
 
         employee_id_param = '123'
-        benefit_type_param = 'Super Platinum Plan'
+        medical_coverage_param = 'Platinum Medical'
 
         try:
-            run(page, employee_id=employee_id_param, benefit_type=benefit_type_param)
+            run(page, employee_id=employee_id_param, medical_coverage=medical_coverage_param)
         except Exception as e:
             print(f"An error occurred: {e}")
         finally:

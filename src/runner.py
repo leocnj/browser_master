@@ -1,23 +1,19 @@
 import os
 import asyncio
 from browser_use import Agent
-from langchain_openai import ChatOpenAI
+from langchain_google_genai import ChatGoogleGenerativeAI
 from pydantic import ConfigDict
 
-class MyChatOpenAI(ChatOpenAI):
+class MyChatGoogle(ChatGoogleGenerativeAI):
     model_config = ConfigDict(extra="allow", arbitrary_types_allowed=True, populate_by_name=True)
-    provider: str = "openai"
+    provider: str = "google"
     
     @property
-    def model(self):
-        return self.model_name
+    def model_name(self):
+        return self.model
 
 async def run_explorer(task: str):
-    llm = MyChatOpenAI(
-        base_url="https://openrouter.ai/api/v1",
-        api_key=os.environ.get("OPENROUTER_API_KEY"),
-        model="openai/gpt-4o-2024-11-20"
-    )
+    llm = MyChatGoogle(model="gemini-2.5-flash")
     agent = Agent(task=task, llm=llm)
     history = await agent.run()
     return history

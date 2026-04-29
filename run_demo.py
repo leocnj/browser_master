@@ -6,11 +6,11 @@ from src.runner import run_explorer
 from src.generator import generate_script
 
 async def main():
-    if not os.environ.get("OPENROUTER_API_KEY"):
-        print("Please set the OPENROUTER_API_KEY environment variable.")
+    if not os.environ.get("GEMINI_API_KEY"):
+        print("Please set the GEMINI_API_KEY environment variable.")
         sys.exit(1)
 
-    task = "Go to http://localhost:4200. Find employee ID 123 and update their dental benefit to 'Platinum Plan'."
+    task = "Go to http://localhost:4200. Find employee ID 123. Under Benefits Enrollment, change Medical Coverage to 'Platinum Medical' and submit updates."
     print(f"Task: {task}")
     
     print("Running Browser-Use Agent...")

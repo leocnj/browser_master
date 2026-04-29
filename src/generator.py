@@ -1,12 +1,8 @@
 import os
-from langchain_openai import ChatOpenAI
+from langchain_google_genai import ChatGoogleGenerativeAI
 
 def generate_script(filtered_history: list, params: dict, output_path: str):
-    llm = ChatOpenAI(
-        base_url="https://openrouter.ai/api/v1",
-        api_key=os.environ.get("OPENROUTER_API_KEY"),
-        model="openai/gpt-4o-2024-11-20"
-    )
+    llm = ChatGoogleGenerativeAI(model="gemini-2.5-flash")
     prompt = f"""
     You are a Playwright expert. Convert this agent history into a Python Playwright script.
     The target is a legacy Angular app with poor accessibility. Use this fallback hierarchy for locators:
