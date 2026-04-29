@@ -14,18 +14,23 @@ def run_yaml_steps(yaml_path: str, headless: bool = False):
     with open(yaml_path, 'r') as f:
         config = yaml.safe_load(f)
     
-    # Load the a11y patch script
+    # Load the scripts
+    axe_path = os.path.join(os.path.dirname(__file__), 'axe.min.js')
     patch_path = os.path.join(os.path.dirname(__file__), 'a11y_patch.js')
+    
+    with open(axe_path, 'r') as f:
+        axe_script = f.read()
     with open(patch_path, 'r') as f:
         patch_script = f.read()
 
-    print(f"--- Starting YAML Playwright Engine ({yaml_path}) ---")
+    print(f"--- Starting Axe-Powered YAML Engine ({yaml_path}) ---")
     
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=headless, slow_mo=1500)
         context = browser.new_context()
         
-        # KEY: Inject the a11y patch so it runs before any other script
+        # Inject both: Axe-core first, then our Smart Patcher
+        context.add_init_script(axe_script)
         context.add_init_script(patch_script)
         
         page = context.new_page()
