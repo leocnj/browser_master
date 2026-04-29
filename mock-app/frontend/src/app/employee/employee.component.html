@@ -46,7 +46,13 @@
     <div class="flex-col mb-4">
       <div class="hostile-row">
         <span>Medical Coverage:</span>
-        <input type="text" class="input-field" style="width: 60%;" [(ngModel)]="newMedical" ng-reflect-name="med" />
+        <select class="input-field" style="width: 60%;" [(ngModel)]="newMedical" ng-reflect-name="med">
+          <option value="Standard Medical">Standard Medical</option>
+          <option value="Gold Medical">Gold Medical</option>
+          <option value="Platinum Medical">Platinum Medical</option>
+          <option value="High Deductible HSA">High Deductible HSA</option>
+          <option value="No Medical Coverage">No Medical Coverage</option>
+        </select>
       </div>
       <div class="hostile-row">
         <span>Dental Coverage:</span>
