@@ -1,18 +1,66 @@
-<div class="hostile-wrapper" ng-reflect-type="form-container">
-  <div>
-    <span>Emp ID:</span>
-    <input type="text" [(ngModel)]="employeeId" ng-reflect-model="empId" />
-    <div class="submit-btn" style="cursor: pointer; background: #eee; border: 1px solid #ccc; display: inline-block; padding: 2px 5px;" (click)="search()">Find</div>
+<div class="glass-panel">
+  <h1 class="heading-main">Enterprise HR Portal</h1>
+  
+  <!-- Search Section -->
+  <div class="input-group flex-row mb-4">
+    <div style="flex-grow: 1;">
+      <label for="empSearch" class="text-label">Employee ID Lookup</label>
+      <input id="empSearch" type="text" class="input-field" [(ngModel)]="employeeId" placeholder="Enter ID (e.g., 123)" />
+    </div>
+    <div style="margin-top: 18px;">
+      <button class="btn-primary" (click)="search()">Search Profile</button>
+    </div>
   </div>
 
-  <div *ngIf="employeeData" style="margin-top: 20px; padding: 10px; border: 1px dashed #666;">
-    <div *ngIf="employeeData.error">Employee not found!</div>
-    <div *ngIf="!employeeData.error">
-      <div>Current Plan: {{ employeeData.dental }}</div>
-      <br>
-      <span>Update Dental:</span>
-      <input type="text" [(ngModel)]="newDental" ng-reflect-model="dentalPlan" />
-      <div class="submit-btn" style="cursor: pointer; background: #eee; border: 1px solid #ccc; display: inline-block; padding: 2px 5px;" (click)="update()">Save Plan</div>
+  <div *ngIf="employeeData && employeeData.error" class="mb-4" style="color: #ef4444;">
+    Employee not found. Please try ID '123' or '456'.
+  </div>
+
+  <div *ngIf="employeeData && !employeeData.error">
+    <!-- Basic Info (Semantic) -->
+    <h2 class="heading-sub mt-4">Basic Information</h2>
+    <div class="flex-row mb-4">
+      <div style="flex: 1;">
+        <label for="empName" class="text-label">Full Name</label>
+        <input id="empName" type="text" class="input-field" [value]="employeeData.name" readonly />
+      </div>
+      <div style="flex: 1;">
+        <label for="empGender" class="text-label">Gender</label>
+        <input id="empGender" type="text" class="input-field" [value]="employeeData.gender" readonly />
+      </div>
+    </div>
+
+    <!-- Confidential Info (Hostile DOM) -->
+    <h2 class="heading-sub mt-4">Confidential Profile (Legacy View)</h2>
+    <div class="hostile-row">
+      <span class="text-label">Social Security Number:</span>
+      <span class="text-value" ng-reflect-val="ssn">{{ employeeData.ssn }}</span>
+    </div>
+    <div class="hostile-row">
+      <span class="text-label">Base Salary:</span>
+      <span class="text-value" ng-reflect-val="sal">{{ employeeData.salary }}</span>
+    </div>
+
+    <!-- Benefits Enrollment (Hostile DOM) -->
+    <h2 class="heading-sub mt-4">Benefits Enrollment</h2>
+    <div class="flex-col mb-4">
+      <div class="hostile-row">
+        <span>Medical Coverage:</span>
+        <input type="text" class="input-field" style="width: 60%;" [(ngModel)]="newMedical" ng-reflect-name="med" />
+      </div>
+      <div class="hostile-row">
+        <span>Dental Coverage:</span>
+        <input type="text" class="input-field" style="width: 60%;" [(ngModel)]="newDental" ng-reflect-name="den" />
+      </div>
+      <div class="hostile-row">
+        <span>Vision Coverage:</span>
+        <input type="text" class="input-field" style="width: 60%;" [(ngModel)]="newVision" ng-reflect-name="vis" />
+      </div>
+    </div>
+    
+    <div style="text-align: right; margin-top: 24px;">
+      <!-- Hostile Save Button (div instead of button) -->
+      <div class="btn-primary btn-success" (click)="update()">Submit Updates</div>
     </div>
   </div>
 </div>
