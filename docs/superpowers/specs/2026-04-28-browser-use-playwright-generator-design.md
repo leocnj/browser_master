@@ -12,6 +12,13 @@ The system utilizes a Dual-Agent Workflow with two distinct phases:
 
 ## Components & Data Flow
 
+### The Target Environment
+0.  **Mock Angular HR App (`/mock-app`):**
+    *   A local Angular frontend designed to simulate the real HR portal (using dynamic `ng-reflect` or custom IDs).
+    *   A lightweight local backend (e.g., Express + SQLite) to store mock employee records and benefit choices.
+    *   Serves as the local target for the `browser-use` agent to navigate.
+
+### The Generator System
 1.  **Browser-Use Runner (`runner.py`):**
     *   Initializes the `browser-use` agent.
     *   Executes the natural language task on the target Angular application.
