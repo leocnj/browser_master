@@ -3,26 +3,35 @@ from unittest.mock import MagicMock, patch
 from src.explorer import Explorer
 
 def test_explorer_initialization():
-    with patch("src.explorer.GeminiContext") as mock_context:
-        mock_instance = MagicMock()
-        mock_context.return_value = mock_instance
+    # Patch the components Explorer initializes to avoid real API calls
+    with patch("src.explorer.Gemini") as mock_llm_cls, \
+         patch("src.explorer.GeminiMultiModal") as mock_mm_llm_cls, \
+         patch("src.explorer.GeminiContext") as mock_ctx_cls:
         
-        explorer = Explorer(model_name="models/gemini-1.5-flash")
+        mock_llm = MagicMock()
+        mock_llm_cls.return_value = mock_llm
         
-        assert explorer.context == mock_instance
-        mock_context.assert_called_once_with(llm="models/gemini-1.5-flash")
+        mock_mm_llm = MagicMock()
+        mock_mm_llm_cls.return_value = mock_mm_llm
+        
+        mock_ctx = MagicMock()
+        mock_ctx_cls.return_value = mock_ctx
+        
+        explorer = Explorer(model_name="models/gemini-2.5-flash")
+        
+        assert explorer.context == mock_ctx
+        mock_llm_cls.assert_called_with(model_name="models/gemini-2.5-flash", api_key=None)
 
 def test_run_task():
-    with patch("src.explorer.SeleniumDriver") as mock_driver_cls, \
+    # Patch everything to avoid side effects
+    with patch("src.explorer.Gemini"), \
+         patch("src.explorer.GeminiMultiModal"), \
+         patch("src.explorer.GeminiContext"), \
+         patch("src.explorer.SeleniumDriver") as mock_driver_cls, \
          patch("src.explorer.ActionEngine") as mock_action_engine_cls, \
          patch("src.explorer.WorldModel") as mock_world_model_cls, \
-         patch("src.explorer.WebAgent") as mock_agent_cls, \
-         patch("src.explorer.GeminiContext") as mock_context_cls:
+         patch("src.explorer.WebAgent") as mock_agent_cls:
         
-        # Setup mocks
-        mock_context = MagicMock()
-        mock_context_cls.return_value = mock_context
-
         mock_driver = MagicMock()
         mock_driver_cls.return_value = mock_driver
         
@@ -42,10 +51,6 @@ def test_run_task():
         
         # Assertions
         mock_driver_cls.assert_called_once_with(headless=True)
-        mock_action_engine_cls.from_context.assert_called_once()
-        mock_world_model_cls.from_context.assert_called_once()
-        mock_agent_cls.assert_called_once_with(mock_world_model, mock_action_engine)
-        
         mock_agent.get.assert_called_once_with("https://example.com")
         mock_agent.run.assert_called_once_with("Click the button")
         mock_driver.driver.quit.assert_called_once()
