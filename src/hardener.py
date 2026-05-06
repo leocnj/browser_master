@@ -1,6 +1,9 @@
 from bs4 import BeautifulSoup
 
 class Hardener:
+    def __init__(self, context=None):
+        self.context = context
+
     def filter_history(self, logs):
         """Returns only successful steps from the history."""
         if not logs:

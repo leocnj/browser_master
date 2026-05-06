@@ -48,3 +48,26 @@ def test_map_to_semantic_from_html_sibling():
     }
     mapped = hardener.map_to_semantic(step)
     assert mapped["label"] == "Password"
+
+def test_hardener_process_full_logs():
+    hardener = Hardener()
+    logs = [
+        {"action": "goto", "url": "http://app.com", "success": True},
+        {"action": "fill", "instruction": "Fill Email with test@test.com", "xpath": "//input[1]", "success": True, "value": "test@test.com"},
+        {"action": "click", "element_html": "<button>Login</button>", "xpath": "//button[1]", "success": True},
+        {"action": "click", "xpath": "//bad", "success": False}
+    ]
+    
+    filtered = hardener.filter_history(logs)
+    hardened = [hardener.map_to_semantic(s) for s in filtered]
+    
+    assert len(hardened) == 3
+    assert hardened[1]["label"] == "Email"
+    assert hardened[2]["text"] == "Login"
+    assert "xpath" not in hardened[1]
+    assert "xpath" not in hardened[2]
+
+def test_hardener_init_with_context():
+    mock_context = "mock_context"
+    hardener = Hardener(context=mock_context)
+    assert hardener.context == mock_context
