@@ -10,15 +10,17 @@ class Explorer:
     def run_task(self, url: str, goal: str):
         # Initialize headless driver and components
         driver = SeleniumDriver(headless=True)
-        action_engine = ActionEngine.from_context(self.context, driver)
-        world_model = WorldModel.from_context(self.context)
-        agent = WebAgent(world_model, action_engine)
-        
-        # Execute task
-        agent.get(url)
-        agent.run(goal)
-        
-        # Capture history and cleanup
-        history = agent.logger.logs
-        driver.driver.quit()
-        return history
+        try:
+            action_engine = ActionEngine.from_context(self.context, driver)
+            world_model = WorldModel.from_context(self.context)
+            agent = WebAgent(world_model, action_engine)
+            
+            # Execute task
+            agent.get(url)
+            agent.run(goal)
+            
+            # Capture history
+            history = agent.logger.logs
+            return history
+        finally:
+            driver.driver.quit()
