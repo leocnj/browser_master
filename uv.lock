@@ -240,10 +240,12 @@ source = { virtual = "." }
 dependencies = [
     { name = "lavague" },
     { name = "lavague-contexts-gemini" },
+    { name = "lavague-drivers-selenium" },
     { name = "openai" },
     { name = "playwright" },
     { name = "pytest" },
     { name = "pyyaml" },
+    { name = "selenium" },
     { name = "setuptools" },
 ]
 
@@ -251,10 +253,12 @@ dependencies = [
 requires-dist = [
     { name = "lavague", specifier = ">=1.1.19" },
     { name = "lavague-contexts-gemini", specifier = ">=0.2.1" },
+    { name = "lavague-drivers-selenium", specifier = ">=0.2.15" },
     { name = "openai", specifier = ">=2.16.0" },
     { name = "playwright", specifier = ">=1.58.0" },
     { name = "pytest", specifier = ">=9.0.3" },
     { name = "pyyaml", specifier = ">=6.0.3" },
+    { name = "selenium", specifier = ">=4.43.0" },
     { name = "setuptools", specifier = "<70" },
 ]
 
