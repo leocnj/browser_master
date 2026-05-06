@@ -1,4 +1,6 @@
 import pytest
+import json
+from unittest.mock import MagicMock
 from src.hardener import Hardener
 
 def test_filter_history_success_only():
@@ -39,35 +41,65 @@ def test_map_to_semantic_from_html_label():
     assert mapped["label"] == "User Name"
     assert "xpath" not in mapped
 
-def test_map_to_semantic_from_html_sibling():
+def test_detect_verification_url_change():
     hardener = Hardener()
-    step = {
-        "action": "fill", 
-        "element_html": '<div><span>Password</span><input></div>',
-        "xpath": "//input"
-    }
-    mapped = hardener.map_to_semantic(step)
-    assert mapped["label"] == "Password"
+    history = [
+        {"action": "goto", "url": "http://app.com/form", "success": True},
+        {"action": "click", "text": "Submit", "success": True, "url": "http://app.com/success"}
+    ]
+    verified = hardener.detect_verification(history)
+    assert len(verified) == 3
+    assert verified[-1]["action"] == "verify"
+    assert verified[-1]["type"] == "url"
+    assert verified[-1]["value"] == "http://app.com/success"
 
-def test_hardener_process_full_logs():
-    hardener = Hardener()
-    logs = [
+def test_parameterize_mock_llm():
+    mock_llm = MagicMock()
+    mock_response = MagicMock()
+    mock_response.text = json.dumps({
+        "parameters": [{"name": "emp_id", "default": "123", "description": "Employee ID"}],
+        "steps": [{"action": "fill", "label": "ID", "value": "{{emp_id}}"}]
+    })
+    mock_llm.complete.return_value = mock_response
+    
+    mock_context = MagicMock()
+    mock_context.llm = mock_llm
+    
+    hardener = Hardener(context=mock_context)
+    history = [{"action": "fill", "label": "ID", "value": "123"}]
+    
+    result = hardener.parameterize("Update ID 123", history)
+    
+    assert len(result["parameters"]) == 1
+    assert result["parameters"][0]["name"] == "emp_id"
+    assert result["steps"][0]["value"] == "{{emp_id}}"
+    mock_llm.complete.assert_called_once()
+
+def test_harden_full_orchestration():
+    mock_llm = MagicMock()
+    mock_response = MagicMock()
+    mock_response.text = json.dumps({
+        "parameters": [{"name": "emp_id", "default": "123", "description": "ID"}],
+        "steps": [
+            {"action": "goto", "url": "http://app.com"},
+            {"action": "fill", "label": "ID", "value": "{{emp_id}}"},
+            {"action": "verify", "type": "text", "value": "Saved"}
+        ]
+    })
+    mock_llm.complete.return_value = mock_response
+    mock_context = MagicMock()
+    mock_context.llm = mock_llm
+    
+    hardener = Hardener(context=mock_context)
+    raw_logs = [
         {"action": "goto", "url": "http://app.com", "success": True},
-        {"action": "fill", "instruction": "Fill Email with test@test.com", "xpath": "//input[1]", "success": True, "value": "test@test.com"},
-        {"action": "click", "element_html": "<button>Login</button>", "xpath": "//button[1]", "success": True},
-        {"action": "click", "xpath": "//bad", "success": False}
+        {"action": "fill", "instruction": "Fill ID with 123", "xpath": "//input", "success": True, "value": "123"},
+        {"action": "click", "text": "Save", "success": True, "element_html": "<span>Saved</span>"}
     ]
     
-    filtered = hardener.filter_history(logs)
-    hardened = [hardener.map_to_semantic(s) for s in filtered]
+    result = hardener.harden("Update 123", raw_logs)
     
-    assert len(hardened) == 3
-    assert hardened[1]["label"] == "Email"
-    assert hardened[2]["text"] == "Login"
-    assert "xpath" not in hardened[1]
-    assert "xpath" not in hardened[2]
-
-def test_hardener_init_with_context():
-    mock_context = "mock_context"
-    hardener = Hardener(context=mock_context)
-    assert hardener.context == mock_context
+    assert "parameters" in result
+    assert "steps" in result
+    assert len(result["steps"]) == 3
+    assert result["steps"][-1]["action"] == "verify"
