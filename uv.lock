@@ -238,6 +238,7 @@ name = "browser-master"
 version = "0.1.0"
 source = { virtual = "." }
 dependencies = [
+    { name = "beautifulsoup4" },
     { name = "lavague" },
     { name = "lavague-contexts-gemini" },
     { name = "lavague-drivers-selenium" },
@@ -251,6 +252,7 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
+    { name = "beautifulsoup4", specifier = ">=4.14.3" },
     { name = "lavague", specifier = ">=1.1.19" },
     { name = "lavague-contexts-gemini", specifier = ">=0.2.1" },
     { name = "lavague-drivers-selenium", specifier = ">=0.2.15" },
