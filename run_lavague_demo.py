@@ -1,4 +1,7 @@
 import os
+# Disable LaVague telemetry immediately
+os.environ["LAVAGUE_TELEMETRY"] = "NONE"
+
 import json
 import yaml
 from src.explorer import Explorer
@@ -43,11 +46,15 @@ def run_demo(goal, url, parameters=None):
 if __name__ == "__main__":
     # Example Target: Netlify HR System
     TARGET_URL = "https://hr-management-system1.netlify.app/dashboard"
-    GOAL = "Update job title for employee with ID 2 to 'Senior Software Engineer'"
+    GOAL = "Update employee ID 3: change their department to 'Engineering' and position to 'DevOps Lead'"
     
     # Check for API key
     if not os.getenv("GOOGLE_API_KEY"):
         print("⚠️ Warning: GOOGLE_API_KEY not set. Discovery phase will fail.")
         print("To run for real: export GOOGLE_API_KEY=your_key_here")
     
-    run_demo(GOAL, TARGET_URL, parameters={"job_title": "Lead Developer"})
+    # Run with different parameters to prove determinism
+    run_demo(GOAL, TARGET_URL, parameters={
+        "department": "Engineering",
+        "position": "Senior DevOps Architect"
+    })

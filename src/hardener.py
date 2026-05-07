@@ -7,11 +7,20 @@ class Hardener:
         self.context = context
 
     def filter_history(self, logs):
-        """Returns only successful steps from the history."""
+        """Returns only successful, relevant steps from the history."""
         if not logs:
             return []
-        # Support both 'success' (bool) and 'status' (string) if LaVague changes its format
-        return [step for step in logs if step.get("success") is True or step.get("status") == "success"]
+        
+        relevant_actions = ["click", "fill", "select", "goto", "verify"]
+        filtered = []
+        for step in logs:
+            action = step.get("action")
+            success = step.get("success") is True or step.get("status") == "success"
+            
+            # Skip noise like scrolls or unknown actions
+            if success and action in relevant_actions:
+                filtered.append(step)
+        return filtered
 
     def _find_label_in_html(self, html_snippet):
         """Heuristic to find a label for an element within a small HTML snippet."""
@@ -125,21 +134,22 @@ class Hardener:
         return history
 
     def parameterize(self, goal, history):
-        """Uses LLM to identify parameters in the history based on the goal."""
+        """Uses LLM to identify parameters and programmatically replaces them in history."""
         if not self.context or not self.context.llm:
             return {"parameters": [], "steps": history}
 
-        # Clean history for prompt
+        # Clean history for prompt (minimal data)
         clean_history = []
-        for step in history:
+        for i, step in enumerate(history):
             s = {k: v for k, v in step.items() if k in ["action", "label", "text", "value", "url"]}
+            s["id"] = i
             clean_history.append(s)
 
-        prompt = f"""Analyze the following automation GOAL and the successful ACTIONS taken to achieve it.
-Identify values in the ACTIONS that come from the GOAL and should be parameterized.
+        prompt = f"""Analyze the GOAL and the sequence of ACTIONS.
+Identify values (like IDs, names, dates) in the ACTIONS that come from the GOAL.
 Return a JSON object with:
 - 'parameters': a list of {{'name': '...', 'default': '...', 'description': '...'}}
-- 'steps': the ACTIONS with values replaced by '{{{{name}}}}' (double curly braces)
+- 'mappings': a list of {{'step_id': int, 'field': '...', 'param_name': '...'}} 
 
 GOAL: {goal}
 ACTIONS: {json.dumps(clean_history, indent=2)}
@@ -149,13 +159,25 @@ JSON output only."""
         response = self.context.llm.complete(prompt)
         text = response.text
         
-        # Extract JSON from potential markdown markers
         match = re.search(r'\{.*\}', text, re.DOTALL)
         if match:
             try:
                 data = json.loads(match.group())
-                return data
-            except json.JSONDecodeError:
+                
+                # Programmatically replace values to ensure no fields are lost
+                new_steps = [s.copy() for s in history]
+                for m in data.get('mappings', []):
+                    idx = m['step_id']
+                    field = m['field']
+                    param = m['param_name']
+                    if idx < len(new_steps) and field in new_steps[idx]:
+                        new_steps[idx][field] = f"{{{{{param}}}}}"
+                
+                return {
+                    "parameters": data.get('parameters', []),
+                    "steps": new_steps
+                }
+            except Exception:
                 pass
         
         return {"parameters": [], "steps": history}
@@ -163,7 +185,21 @@ JSON output only."""
     def harden(self, goal, raw_logs):
         """Orchestrates the full hardening pipeline."""
         filtered = self.filter_history(raw_logs)
+        # Ensure we have at least interaction metadata
         semantic = [self.map_to_semantic(s) for s in filtered]
         verified = self.detect_verification(semantic)
         parameterized = self.parameterize(goal, verified)
+        
+        # Final cleanup: remove internal fields used by Hardener
+        final_steps = []
+        for step in parameterized["steps"]:
+            clean_step = {k: v for k, v in step.items() if k in ["action", "label", "text", "value", "url", "type", "ms"]}
+            # If action is missing but URL is present, default to 'goto'
+            if not clean_step.get("action") and clean_step.get("url"):
+                clean_step["action"] = "goto"
+            
+            if clean_step.get("action"):
+                final_steps.append(clean_step)
+        
+        parameterized["steps"] = final_steps
         return parameterized

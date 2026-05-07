@@ -7,11 +7,17 @@ class YAMLRunner:
     def __init__(self, headless=True, slow_mo=1000):
         self.headless = headless
         self.slow_mo = slow_mo
+        self.jinja_env = jinja2.Environment()
         
         # Load the scripts
         self.axe_path = os.path.join(os.path.dirname(__file__), 'axe.min.js')
         self.patch_path = os.path.join(os.path.dirname(__file__), 'a11y_patch.js')
         
+        if not os.path.exists(self.axe_path):
+            raise FileNotFoundError(f"Axe script not found at {self.axe_path}")
+        if not os.path.exists(self.patch_path):
+            raise FileNotFoundError(f"Patch script not found at {self.patch_path}")
+            
         with open(self.axe_path, 'r') as f:
             self.axe_script = f.read()
         with open(self.patch_path, 'r') as f:
@@ -22,15 +28,55 @@ class YAMLRunner:
         if not parameters:
             return step
             
-        env = jinja2.Environment()
         new_step = {}
         for k, v in step.items():
             if isinstance(v, str) and "{{" in v:
-                template = env.from_string(v)
+                template = self.jinja_env.from_string(v)
                 new_step[k] = template.render(**parameters)
             else:
                 new_step[k] = v
         return new_step
+
+    def _execute_step(self, page, step):
+        """Executes a single rendered step."""
+        action = step.get('action')
+        
+        if action == 'goto':
+            print(f"-> Navigating to {step['url']}")
+            page.goto(step['url'])
+        
+        elif action == 'fill':
+            print(f"-> Filling label '{step['label']}' with '{step['value']}'")
+            page.get_by_label(step['label']).fill(step['value'])
+        
+        elif action == 'select':
+            print(f"-> Selecting label '{step['label']}' option '{step['value']}'")
+            page.get_by_label(step['label']).select_option(step['value'])
+        
+        elif action == 'click':
+            if 'label' in step:
+                print(f"-> Clicking label '{step['label']}'")
+                page.get_by_label(step['label']).click()
+            else:
+                print(f"-> Clicking text '{step['text']}'")
+                page.get_by_text(step['text']).click()
+        
+        elif action == 'wait':
+            ms = step.get('ms', 2000)
+            print(f"-> Waiting {ms}ms")
+            page.wait_for_timeout(ms)
+            
+        elif action == 'verify':
+            v_type = step.get('type', 'text')
+            if v_type == 'url':
+                print(f"-> Verifying URL matches '{step['value']}'")
+                expect(page).to_have_url(step['value'])
+            else:
+                val = step.get('value') or step.get('text')
+                print(f"-> Verifying text '{val}' is visible")
+                expect(page.get_by_text(val)).to_be_visible()
+        else:
+            raise ValueError(f"Unknown action: {action}")
 
     def run(self, yaml_path, parameters=None):
         if not os.path.exists(yaml_path):
@@ -61,42 +107,7 @@ class YAMLRunner:
             try:
                 for raw_step in config.get('steps', []):
                     step = self._render_step(raw_step, merged_params)
-                    action = step.get('action')
-                    
-                    if action == 'goto':
-                        print(f"-> Navigating to {step['url']}")
-                        page.goto(step['url'])
-                    
-                    elif action == 'fill':
-                        print(f"-> Filling label '{step['label']}' with '{step['value']}'")
-                        page.get_by_label(step['label']).fill(step['value'])
-                    
-                    elif action == 'select':
-                        print(f"-> Selecting label '{step['label']}' option '{step['value']}'")
-                        page.get_by_label(step['label']).select_option(step['value'])
-                    
-                    elif action == 'click':
-                        if 'label' in step:
-                            print(f"-> Clicking label '{step['label']}'")
-                            page.get_by_label(step['label']).click()
-                        else:
-                            print(f"-> Clicking text '{step['text']}'")
-                            page.get_by_text(step['text']).click()
-                    
-                    elif action == 'wait':
-                        ms = step.get('ms', 2000)
-                        print(f"-> Waiting {ms}ms")
-                        page.wait_for_timeout(ms)
-                        
-                    elif action == 'verify':
-                        v_type = step.get('type', 'text')
-                        if v_type == 'url':
-                            print(f"-> Verifying URL matches '{step['value']}'")
-                            expect(page).to_have_url(step['value'])
-                        else:
-                            val = step.get('value') or step.get('text')
-                            print(f"-> Verifying text '{val}' is visible")
-                            expect(page.get_by_text(val)).to_be_visible()
+                    self._execute_step(page, step)
                 
                 print("--- Execution Successful ---")
                 return True

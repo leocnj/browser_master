@@ -23,12 +23,13 @@ def test_yaml_runner_initialization(mock_files):
         assert runner.axe_script == 'console.log("axe");'
         assert runner.patch_script == 'console.log("patch");'
 
-def test_render_step():
-    runner = YAMLRunner.__new__(YAMLRunner) # Skip __init__
-    step = {"action": "fill", "value": "{{emp_id}}"}
-    params = {"emp_id": "123"}
-    rendered = runner._render_step(step, params)
-    assert rendered["value"] == "123"
+def test_render_step(mock_files):
+    with patch("builtins.open", side_effect=mock_files):
+        runner = YAMLRunner()
+        step = {"action": "fill", "value": "{{emp_id}}"}
+        params = {"emp_id": "123"}
+        rendered = runner._render_step(step, params)
+        assert rendered["value"] == "123"
 
 @patch("src.yaml_runner.expect")
 @patch("src.yaml_runner.sync_playwright")
