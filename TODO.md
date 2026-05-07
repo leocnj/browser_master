@@ -1,0 +1,7 @@
+- [ ] Task 1: Setup Hardener Class and Basic Filtering
+- [ ] Task 2: Implement Semantic Mapping via Instruction
+- [ ] Task 3: Implement Semantic Mapping via HTML Heuristics
+- [ ] Task 4: Final Verification and Cleanup
+- [ ] Task 1: Refactor to YAMLRunner Class
+- [ ] Task 2: Implement Parameter Injection
+- [ ] Task 3: Implement Actions and Verification
