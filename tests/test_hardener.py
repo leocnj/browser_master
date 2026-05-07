@@ -56,9 +56,10 @@ def test_detect_verification_url_change():
 def test_parameterize_mock_llm():
     mock_llm = MagicMock()
     mock_response = MagicMock()
+    # The real parameterize logic uses 'mappings' to surgically replace values
     mock_response.text = json.dumps({
         "parameters": [{"name": "emp_id", "default": "123", "description": "Employee ID"}],
-        "steps": [{"action": "fill", "label": "ID", "value": "{{emp_id}}"}]
+        "mappings": [{"step_id": 0, "field": "value", "param_name": "emp_id"}]
     })
     mock_llm.complete.return_value = mock_response
     
@@ -80,11 +81,7 @@ def test_harden_full_orchestration():
     mock_response = MagicMock()
     mock_response.text = json.dumps({
         "parameters": [{"name": "emp_id", "default": "123", "description": "ID"}],
-        "steps": [
-            {"action": "goto", "url": "http://app.com"},
-            {"action": "fill", "label": "ID", "value": "{{emp_id}}"},
-            {"action": "verify", "type": "text", "value": "Saved"}
-        ]
+        "mappings": [{"step_id": 1, "field": "value", "param_name": "emp_id"}]
     })
     mock_llm.complete.return_value = mock_response
     mock_context = MagicMock()
@@ -101,5 +98,7 @@ def test_harden_full_orchestration():
     
     assert "parameters" in result
     assert "steps" in result
-    assert len(result["steps"]) == 3
+    # steps: goto, fill, click, verify
+    assert len(result["steps"]) == 4
     assert result["steps"][-1]["action"] == "verify"
+    assert result["steps"][1]["value"] == "{{emp_id}}"
