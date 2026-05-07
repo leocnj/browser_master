@@ -1,6 +1,7 @@
 from bs4 import BeautifulSoup
 import json
 import re
+from browser_use.llm.messages import UserMessage
 
 class Hardener:
     def __init__(self, context=None):
@@ -83,11 +84,7 @@ class Hardener:
             elif action == "select":
                 new_step["label"] = label
             
-            # Remove brittle locator if we successfully mapped to semantic
-            if "xpath" in new_step:
-                del new_step["xpath"]
-            if "css" in new_step:
-                del new_step["css"]
+            # Note: We KEEP the xpath/css as fallbacks now
                 
         return new_step
 
@@ -141,7 +138,7 @@ class Hardener:
         # Clean history for prompt (minimal data)
         clean_history = []
         for i, step in enumerate(history):
-            s = {k: v for k, v in step.items() if k in ["action", "label", "text", "value", "url"]}
+            s = {k: v for k, v in step.items() if k in ["action", "label", "text", "value", "url", "xpath"]}
             s["id"] = i
             clean_history.append(s)
 
@@ -156,8 +153,8 @@ ACTIONS: {json.dumps(clean_history, indent=2)}
 
 JSON output only."""
 
-        response = await self.context.llm.ainvoke(prompt)
-        text = response.content
+        response = await self.context.llm.ainvoke([UserMessage(content=prompt)])
+        text = response.completion
         
         match = re.search(r'\{.*\}', text, re.DOTALL)
         if match:
@@ -193,7 +190,7 @@ JSON output only."""
         # Final cleanup: remove internal fields used by Hardener
         final_steps = []
         for step in parameterized["steps"]:
-            clean_step = {k: v for k, v in step.items() if k in ["action", "label", "text", "value", "url", "type", "ms"]}
+            clean_step = {k: v for k, v in step.items() if k in ["action", "label", "text", "value", "url", "xpath", "type", "ms"]}
             # If action is missing but URL is present, default to 'goto'
             if not clean_step.get("action") and clean_step.get("url"):
                 clean_step["action"] = "goto"

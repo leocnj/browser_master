@@ -47,20 +47,62 @@ class YAMLRunner:
             await page.goto(step['url'])
         
         elif action == 'fill':
-            print(f"-> Filling label '{step['label']}' with '{step['value']}'")
-            await page.get_by_label(step['label']).fill(step['value'])
+            print(f"-> Filling '{step.get('label') or step.get('xpath')}' with '{step['value']}'")
+            if 'label' in step:
+                locator = page.get_by_label(step['label'])
+            elif 'xpath' in step:
+                locator = page.locator(f"xpath={step['xpath']}")
+            else:
+                raise ValueError("No locator found for fill action")
+                
+            try:
+                await locator.fill(str(step['value']))
+            except Exception as e:
+                if "strict mode violation" in str(e):
+                    await locator.first.fill(str(step['value']))
+                else:
+                    raise e
         
         elif action == 'select':
-            print(f"-> Selecting label '{step['label']}' option '{step['value']}'")
-            await page.get_by_label(step['label']).select_option(step['value'])
+            print(f"-> Selecting '{step.get('label') or step.get('xpath')}' option '{step['value']}'")
+            if 'label' in step:
+                locator = page.get_by_label(step['label'])
+            elif 'xpath' in step:
+                locator = page.locator(f"xpath={step['xpath']}")
+            else:
+                raise ValueError("No locator found for select action")
+
+            try:
+                await locator.select_option(str(step['value']))
+            except Exception as e:
+                if "strict mode violation" in str(e):
+                    await locator.first.select_option(str(step['value']))
+                else:
+                    raise e
         
         elif action == 'click':
             if 'label' in step:
                 print(f"-> Clicking label '{step['label']}'")
-                await page.get_by_label(step['label']).click()
-            else:
+                locator = page.get_by_label(step['label'])
+            elif 'text' in step:
                 print(f"-> Clicking text '{step['text']}'")
-                await page.get_by_text(step['text']).click()
+                locator = page.get_by_text(step['text'])
+            elif 'xpath' in step:
+                print(f"-> Clicking xpath '{step['xpath']}'")
+                locator = page.locator(f"xpath={step['xpath']}")
+            else:
+                raise ValueError("No locator found for click action")
+            
+            try:
+                await locator.click()
+            except Exception as e:
+                if "strict mode violation" in str(e):
+                    await locator.first.click()
+                elif "Timeout" in str(e) and ('text' in step or 'label' in step) and 'xpath' in step:
+                    print(f"  ! Semantic locator failed, falling back to XPath: {step['xpath']}")
+                    await page.locator(f"xpath={step['xpath']}").first.click()
+                else:
+                    raise e
         
         elif action == 'wait':
             ms = step.get('ms', 2000)
@@ -75,7 +117,14 @@ class YAMLRunner:
             else:
                 val = step.get('value') or step.get('text')
                 print(f"-> Verifying text '{val}' is visible")
-                await expect(page.get_by_text(val)).to_be_visible()
+                locator = page.get_by_text(val)
+                try:
+                    await expect(locator).to_be_visible()
+                except Exception as e:
+                    if "strict mode violation" in str(e):
+                        await expect(locator.first).to_be_visible()
+                    else:
+                        raise e
         else:
             raise ValueError(f"Unknown action: {action}")
 
@@ -127,4 +176,3 @@ if __name__ == "__main__":
         await runner.run(path)
     
     asyncio.run(main())
-
