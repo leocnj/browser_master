@@ -1,59 +1,95 @@
 import pytest
-from unittest.mock import MagicMock, patch
+import os
+from unittest.mock import MagicMock, patch, AsyncMock
 from src.explorer import Explorer
+from pydantic import SecretStr
 
-def test_explorer_initialization():
-    # Patch the components Explorer initializes to avoid real API calls
-    # We patch at the module level where they are imported
-    with patch("src.explorer.Gemini") as mock_llm_cls, \
-         patch("src.explorer.GeminiMultiModal") as mock_mm_llm_cls, \
-         patch("src.explorer.GeminiContext") as mock_ctx_cls:
-        
+@pytest.mark.asyncio
+async def test_explorer_initialization():
+    with patch("src.explorer.ChatGoogleGenerativeAI") as mock_llm_cls:
         mock_llm = MagicMock()
         mock_llm_cls.return_value = mock_llm
         
-        mock_mm_llm = MagicMock()
-        mock_mm_llm_cls.return_value = mock_mm_llm
-        
-        mock_ctx = MagicMock()
-        mock_ctx_cls.return_value = mock_ctx
-        
-        # The __init__ uses patch() internally, which makes tracking the direct call tricky
-        # but we can verify the context is set.
-        explorer = Explorer(model_name="models/gemini-2.5-flash")
-        
-        assert explorer.context == mock_ctx
+        with patch.dict("os.environ", {"GOOGLE_API_KEY": "test-key"}):
+            explorer = Explorer(model_name="gemini-2.0-flash-exp")
+            
+            mock_llm_cls.assert_called_once()
+            args, kwargs = mock_llm_cls.call_args
+            assert kwargs["model"] == "gemini-2.0-flash-exp"
+            assert isinstance(kwargs["api_key"], SecretStr)
+            assert kwargs["api_key"].get_secret_value() == "test-key"
 
-def test_run_task():
-    # Patch everything to avoid side effects
-    with patch("src.explorer.Gemini"), \
-         patch("src.explorer.GeminiMultiModal"), \
-         patch("src.explorer.GeminiContext"), \
-         patch("src.explorer.SeleniumDriver") as mock_driver_cls, \
-         patch("src.explorer.ActionEngine") as mock_action_engine_cls, \
-         patch("src.explorer.WorldModel") as mock_world_model_cls, \
-         patch("src.explorer.WebAgent") as mock_agent_cls:
-        
-        mock_driver = MagicMock()
-        mock_driver_cls.return_value = mock_driver
-        
-        mock_action_engine = MagicMock()
-        mock_action_engine_cls.from_context.return_value = mock_action_engine
-        
-        mock_world_model = MagicMock()
-        mock_world_model_cls.from_context.return_value = mock_world_model
-        
-        mock_agent = MagicMock()
-        mock_agent_cls.return_value = mock_agent
-        mock_agent.logger.logs = [{"step": 1, "action": "click"}]
-        
-        # Execute
+@pytest.mark.asyncio
+async def test_run_task_success():
+    with patch.dict("os.environ", {"GOOGLE_API_KEY": "test-key"}):
+        with patch("src.explorer.ChatGoogleGenerativeAI"), \
+             patch("src.explorer.Agent") as mock_agent_cls:
+            
+            mock_agent = MagicMock()
+            mock_agent_cls.return_value = mock_agent
+            
+            # Mocking the async run method
+            mock_agent.run = AsyncMock()
+            
+            # Mocking history steps
+            class MockAction:
+                def __init__(self, name, params):
+                    self.name = name
+                    self.params = params
+
+                def dict(self):
+                    return {self.name: self.params}
+
+            # Simulate browser-use history
+            mock_history = MagicMock()
+            mock_history.final_result.return_value = "Done"
+            
+            # Creating mock steps with actions
+            step1 = MagicMock()
+            step1.browser_action = MockAction("open_url", {"url": "https://example.com"})
+            
+            step2 = MagicMock()
+            step2.browser_action = MockAction("click_element", {"index": 0})
+            
+            step3 = MagicMock()
+            step3.browser_action = MockAction("input_text", {"index": 1, "text": "hello"})
+            
+            mock_history.history = [step1, step2, step3]
+            mock_agent.run.return_value = mock_history
+            
+            explorer = Explorer()
+            history = await explorer.run_task("https://example.com", "Goal")
+            
+            assert len(history) == 3
+            assert history[0] == {"action": "goto", "url": "https://example.com", "success": True}
+            assert history[1] == {"action": "click", "text": 0, "success": True}
+            assert history[2] == {"action": "fill", "label": 1, "value": "hello", "success": True}
+
+@pytest.mark.asyncio
+async def test_map_to_legacy_actions():
+    with patch.dict("os.environ", {"GOOGLE_API_KEY": "test-key"}):
         explorer = Explorer()
-        history = explorer.run_task("https://example.com", "Click the button")
-        
-        # Assertions
-        mock_driver_cls.assert_called_once_with(headless=True)
-        mock_agent.get.assert_called_once_with("https://example.com")
-        mock_driver.driver.quit.assert_called_once()
-        
-        assert history == [{"step": 1, "action": "click"}]
+    
+    class MockAction:
+        def __init__(self, name, params):
+            self.name = name
+            self.params = params
+        def dict(self):
+            return {self.name: self.params}
+
+    class MockStep:
+        def __init__(self, name, params):
+            self.browser_action = MockAction(name, params)
+
+    # Test individual mappings
+    step_goto = MockStep("open_url", {"url": "http://test.com"})
+    assert explorer._map_to_legacy([step_goto]) == [{"action": "goto", "url": "http://test.com", "success": True}]
+    
+    step_click = MockStep("click_element", {"index": 5})
+    assert explorer._map_to_legacy([step_click]) == [{"action": "click", "text": 5, "success": True}]
+    
+    step_fill = MockStep("input_text", {"index": "user", "text": "Alice"})
+    assert explorer._map_to_legacy([step_fill]) == [{"action": "fill", "label": "user", "value": "Alice", "success": True}]
+    
+    step_unknown = MockStep("unknown_action", {"foo": "bar"})
+    assert explorer._map_to_legacy([step_unknown]) == []

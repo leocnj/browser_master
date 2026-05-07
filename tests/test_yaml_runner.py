@@ -1,5 +1,5 @@
 import pytest
-from unittest.mock import MagicMock, patch, mock_open
+from unittest.mock import MagicMock, patch, mock_open, AsyncMock
 from src.yaml_runner import YAMLRunner
 
 @pytest.fixture
@@ -31,12 +31,13 @@ def test_render_step(mock_files):
         rendered = runner._render_step(step, params)
         assert rendered["value"] == "123"
 
+@pytest.mark.asyncio
 @patch("src.yaml_runner.expect")
-@patch("src.yaml_runner.sync_playwright")
-def test_yaml_runner_run(mock_sync_p, mock_expect, mock_files):
+@patch("src.yaml_runner.async_playwright")
+async def test_yaml_runner_run(mock_async_p, mock_expect, mock_files):
     with patch("builtins.open", side_effect=mock_files):
         runner = YAMLRunner()
-        
+
         yaml_content = """
         parameters:
           - name: emp_id
@@ -51,19 +52,38 @@ def test_yaml_runner_run(mock_sync_p, mock_expect, mock_files):
             type: text
             value: Success
         """
-        
+
         with patch("os.path.exists", return_value=True), \
              patch("builtins.open", mock_open(read_data=yaml_content)):
-            
-            mock_p = mock_sync_p.return_value.__enter__.return_value
-            mock_browser = mock_p.chromium.launch.return_value
-            mock_context = mock_browser.new_context.return_value
-            mock_page = mock_context.new_page.return_value
-            
-            success = runner.run("dummy.yaml", parameters={"emp_id": "456"})
-            
+
+            # Setup async mocks for playwright
+            mock_p = mock_async_p.return_value.__aenter__.return_value
+            mock_browser = MagicMock()
+            mock_context = MagicMock()
+            mock_page = MagicMock()
+
+            mock_p.chromium.launch = AsyncMock(return_value=mock_browser)
+            mock_browser.new_context = AsyncMock(return_value=mock_context)
+            mock_context.new_page = AsyncMock(return_value=mock_page)
+            mock_browser.close = AsyncMock()
+
+            mock_context.add_init_script = AsyncMock()
+
+            mock_page.goto = AsyncMock()
+            mock_page.get_by_label = MagicMock()
+            mock_page.get_by_label.return_value.fill = AsyncMock()
+            mock_page.get_by_text = MagicMock()
+
+            # expect(locator).to_be_visible() is awaited
+            mock_expect.return_value.to_be_visible = AsyncMock()
+            mock_expect.return_value.to_have_url = AsyncMock()
+
+            success = await runner.run("dummy.yaml", parameters={"emp_id": "456"})
+
             assert success is True
             mock_page.goto.assert_called_once_with("http://test.com")
             mock_page.get_by_label.assert_called_with("ID")
             mock_page.get_by_label.return_value.fill.assert_called_with("456")
             mock_expect.assert_called()
+
+

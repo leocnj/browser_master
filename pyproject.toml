@@ -5,15 +5,18 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
-    "beautifulsoup4>=4.14.3",
-    "jinja2>=3.1.6",
-    "lavague>=1.1.19",
-    "lavague-contexts-gemini>=0.2.1",
-    "lavague-drivers-selenium>=0.2.15",
+    "beautifulsoup4>=4.12.0",
+    "browser-use>=0.1.0",
+    "jinja2>=3.1.0",
+    "langchain-google-genai>=1.0.0",
     "openai>=2.16.0",
-    "playwright>=1.58.0",
+    "playwright>=1.40.0",
+    "pydantic>=2.0.0",
     "pytest>=9.0.3",
     "pyyaml>=6.0.3",
-    "selenium>=4.43.0",
-    "setuptools<70",
+]
+
+[dependency-groups]
+dev = [
+    "pytest-asyncio>=0.23.0",
 ]
