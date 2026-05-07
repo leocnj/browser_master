@@ -133,7 +133,7 @@ class Hardener:
         
         return history
 
-    def parameterize(self, goal, history):
+    async def parameterize(self, goal, history):
         """Uses LLM to identify parameters and programmatically replaces them in history."""
         if not self.context or not self.context.llm:
             return {"parameters": [], "steps": history}
@@ -156,8 +156,8 @@ ACTIONS: {json.dumps(clean_history, indent=2)}
 
 JSON output only."""
 
-        response = self.context.llm.complete(prompt)
-        text = response.text
+        response = await self.context.llm.ainvoke(prompt)
+        text = response.content
         
         match = re.search(r'\{.*\}', text, re.DOTALL)
         if match:
@@ -182,13 +182,13 @@ JSON output only."""
         
         return {"parameters": [], "steps": history}
 
-    def harden(self, goal, raw_logs):
+    async def harden(self, goal, raw_logs):
         """Orchestrates the full hardening pipeline."""
         filtered = self.filter_history(raw_logs)
         # Ensure we have at least interaction metadata
         semantic = [self.map_to_semantic(s) for s in filtered]
         verified = self.detect_verification(semantic)
-        parameterized = self.parameterize(goal, verified)
+        parameterized = await self.parameterize(goal, verified)
         
         # Final cleanup: remove internal fields used by Hardener
         final_steps = []

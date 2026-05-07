@@ -1,6 +1,6 @@
 import pytest
 import json
-from unittest.mock import MagicMock
+from unittest.mock import AsyncMock, MagicMock
 from src.hardener import Hardener
 
 def test_filter_history_success_only():
@@ -53,15 +53,16 @@ def test_detect_verification_url_change():
     assert verified[-1]["type"] == "url"
     assert verified[-1]["value"] == "http://app.com/success"
 
-def test_parameterize_mock_llm():
-    mock_llm = MagicMock()
+@pytest.mark.asyncio
+async def test_parameterize_mock_llm():
+    mock_llm = AsyncMock()
     mock_response = MagicMock()
     # The real parameterize logic uses 'mappings' to surgically replace values
-    mock_response.text = json.dumps({
+    mock_response.content = json.dumps({
         "parameters": [{"name": "emp_id", "default": "123", "description": "Employee ID"}],
         "mappings": [{"step_id": 0, "field": "value", "param_name": "emp_id"}]
     })
-    mock_llm.complete.return_value = mock_response
+    mock_llm.ainvoke.return_value = mock_response
     
     mock_context = MagicMock()
     mock_context.llm = mock_llm
@@ -69,21 +70,22 @@ def test_parameterize_mock_llm():
     hardener = Hardener(context=mock_context)
     history = [{"action": "fill", "label": "ID", "value": "123"}]
     
-    result = hardener.parameterize("Update ID 123", history)
+    result = await hardener.parameterize("Update ID 123", history)
     
     assert len(result["parameters"]) == 1
     assert result["parameters"][0]["name"] == "emp_id"
     assert result["steps"][0]["value"] == "{{emp_id}}"
-    mock_llm.complete.assert_called_once()
+    mock_llm.ainvoke.assert_called_once()
 
-def test_harden_full_orchestration():
-    mock_llm = MagicMock()
+@pytest.mark.asyncio
+async def test_harden_full_orchestration():
+    mock_llm = AsyncMock()
     mock_response = MagicMock()
-    mock_response.text = json.dumps({
+    mock_response.content = json.dumps({
         "parameters": [{"name": "emp_id", "default": "123", "description": "ID"}],
         "mappings": [{"step_id": 1, "field": "value", "param_name": "emp_id"}]
     })
-    mock_llm.complete.return_value = mock_response
+    mock_llm.ainvoke.return_value = mock_response
     mock_context = MagicMock()
     mock_context.llm = mock_llm
     
@@ -94,7 +96,7 @@ def test_harden_full_orchestration():
         {"action": "click", "text": "Save", "success": True, "element_html": "<span>Saved</span>"}
     ]
     
-    result = hardener.harden("Update 123", raw_logs)
+    result = await hardener.harden("Update 123", raw_logs)
     
     assert "parameters" in result
     assert "steps" in result
